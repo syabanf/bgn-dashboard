@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "bgn-dashboard",
+      "cwd": "/Users/syabanf/Downloads/BGN Dashboard",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "7788"],
+      "port": 7788
+    }
+  ]
+}
