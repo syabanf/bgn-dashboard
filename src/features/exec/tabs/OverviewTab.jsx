@@ -4,6 +4,9 @@ import { BarsRow } from '../../../components/ui'
 import { Ico } from '../../../components/ui/icons'
 import { IndonesiaMap } from '../../../components/map/IndonesiaMap'
 import { HaccpHeatmap } from '../../../components/ui/HaccpHeatmap'
+import { geoChildren } from '../../../lib/geoHelpers'
+import { riskColor, riskLabel } from '../../../lib/utils'
+import { LEVEL_LABELS } from '../constants'
 
 function MaturityRadial() {
   const items = [
@@ -181,17 +184,90 @@ function SppgTable({ rows: rowsIn }) {
 }
 
 export default function OverviewTab({ D }) {
+  const [drillLevel, setDrillLevel] = React.useState('province')
+  const [drillPath,  setDrillPath]  = React.useState([])
+  const [drillPoints, setDrillPoints] = React.useState(null)
+  const [selPoint,   setSelPoint]   = React.useState(null)
+
+  const currentPoints = drillPoints || D.provinces
+  const nextLabel = drillLevel === 'province' ? 'Kota/Kab' : drillLevel === 'kota' ? 'Kecamatan' : drillLevel === 'kecamatan' ? 'Kelurahan' : null
+
+  const drillInto = (p) => {
+    if (drillLevel === 'kelurahan') return
+    const nextLevel = drillLevel === 'province' ? 'kota' : drillLevel === 'kota' ? 'kecamatan' : 'kelurahan'
+    setDrillPath(prev => [...prev, { code: p.code, name: p.name, level: drillLevel }])
+    setDrillLevel(nextLevel)
+    setDrillPoints(geoChildren(p, nextLevel))
+    setSelPoint(null)
+  }
+
+  const drillUp = (idx) => {
+    if (idx < 0) { setDrillLevel('province'); setDrillPath([]); setDrillPoints(null); setSelPoint(null); return }
+    const target = drillPath[idx]
+    const nextLevel = target.level === 'province' ? 'kota' : target.level === 'kota' ? 'kecamatan' : 'kelurahan'
+    setDrillPath(drillPath.slice(0, idx))
+    setDrillLevel(nextLevel)
+    setDrillPoints(geoChildren(target, nextLevel))
+    setSelPoint(null)
+  }
+
   return (
     <div className="row-gap">
       {/* Geo + alerts */}
       <div className="grid-2">
-        <Card title="Sebaran SPPG & Risk Level Nasional"
-              subtitle="Lingkaran = volume porsi · warna = risk level operasional"
-              tools={<>{Ico.search && <button className="iconbtn">{Ico.search}</button>}<button className="iconbtn">{Ico.download}</button></>}
-              padded={false}>
+        <Card
+          title={drillPath.length > 0 ? `Sebaran SPPG — ${LEVEL_LABELS[drillLevel]}` : 'Sebaran SPPG & Risk Level Nasional'}
+          subtitle={`${currentPoints.length} ${LEVEL_LABELS[drillLevel]} · Klik titik untuk ${nextLabel ? `drill-down ke ${nextLabel}` : 'detail'}`}
+          tools={<button className="iconbtn">{Ico.download}</button>}
+          padded={false}>
+          {/* Breadcrumb */}
+          {drillPath.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px 0', flexWrap: 'wrap' }}>
+              <button className="btn" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => drillUp(-1)}>Nasional</button>
+              {drillPath.map((p, i) => (
+                <React.Fragment key={p.code}>
+                  <span style={{ color: 'var(--ink-400)', fontSize: 12 }}>›</span>
+                  <button className="btn" style={{ fontSize: 11, padding: '3px 8px' }} onClick={() => drillUp(i)}>{p.name}</button>
+                </React.Fragment>
+              ))}
+              <span style={{ color: 'var(--ink-400)', fontSize: 12 }}>›</span>
+              <span style={{ fontSize: 11, color: 'var(--ink-600)', padding: '3px 8px', background: 'var(--bgn-navy-100)', borderRadius: 4 }}>{LEVEL_LABELS[drillLevel]}</span>
+            </div>
+          )}
           <div style={{ padding: 14 }}>
-            <IndonesiaMap provinces={D.provinces} mode="exec"/>
+            <IndonesiaMap
+              provinces={D.provinces}
+              drillPoints={drillPoints}
+              mode="exec"
+              onDrillDown={drillInto}
+              onSelect={(code) => setSelPoint(currentPoints.find(p => p.code === code) || null)}
+              selected={selPoint?.code}
+            />
           </div>
+          {/* Mini detail strip */}
+          {selPoint && (
+            <div style={{ padding: '10px 16px', borderTop: '1px solid var(--ink-100)', background: 'var(--ink-50)', display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
+              <strong style={{ flex: 1, minWidth: 120, fontSize: 13, color: 'var(--bgn-navy-deep)' }}>{selPoint.name}</strong>
+              {[
+                ['SPPG', (selPoint.sppg||0).toLocaleString('id-ID')],
+                ['Porsi/hari', `${((selPoint.porsi||0)/1000).toFixed(0)}K`],
+                ['Compliance', `${selPoint.comply||0}%`],
+              ].map(([l, v]) => (
+                <div key={l}>
+                  <div style={{ fontSize: 10, color: 'var(--ink-500)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{l}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: l === 'Compliance' ? riskColor(selPoint.risk||'low') : 'var(--bgn-navy-deep)' }}>{v}</div>
+                </div>
+              ))}
+              <span className={`chip ${selPoint.risk === 'high' ? 'risk' : selPoint.risk === 'med' ? 'warn' : 'safe'}`}>
+                <span className="dot"/>{riskLabel(selPoint.risk||'low')}
+              </span>
+              {nextLabel && (
+                <button className="btn btn-primary" style={{ fontSize: 12, padding: '5px 12px' }} onClick={() => drillInto(selPoint)}>
+                  {nextLabel} →
+                </button>
+              )}
+            </div>
+          )}
         </Card>
         <Card title="Notifikasi Operasional Live"
               subtitle="Auto-hold, pelanggaran suhu, dugaan insiden pangan awal"
