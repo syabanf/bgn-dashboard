@@ -1,0 +1,25 @@
+{
+  "name": "BGN MBG Dashboard",
+  "short_name": "BGN Dashboard",
+  "description": "Dashboard Monitoring Program Makan Bergizi — Badan Gizi Nasional",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#08183A",
+  "theme_color": "#08183A",
+  "lang": "id",
+  "categories": ["government", "health", "productivity"],
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "screenshots": [
+    { "src": "/icons/screenshot-wide.png", "sizes": "1280x800", "type": "image/png", "form_factor": "wide", "label": "Executive Dashboard" },
+    { "src": "/icons/screenshot-mobile.png", "sizes": "375x812", "type": "image/png", "form_factor": "narrow", "label": "Mobile Dashboard" }
+  ],
+  "shortcuts": [
+    { "name": "Executive Dashboard", "short_name": "BOD", "description": "Buka BOD Executive View", "url": "/?role=exec", "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }] },
+    { "name": "Public Dashboard", "short_name": "Publik", "description": "Buka Dashboard Publik", "url": "/?role=public", "icons": [{ "src": "/icons/icon.svg", "sizes": "any" }] }
+  ]
+}
