@@ -1,6 +1,5 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Card } from '../../../components/ui'
-import { DrillDrawer } from '../../../components/ui/DrillDrawer'
 
 const METRIC_SORT = {
   'Coverage penerima manfaat':   'porsi',
@@ -13,15 +12,7 @@ const METRIC_SORT = {
   'Maturity score (HACCP)':      'comply',
 }
 
-export default function KpiTab({ D }) {
-  const [drawer, setDrawer] = useState(null)
-  const [drawerKey, setDrawerKey] = useState(0)
-
-  const openDrawer = (title, subtitle, sortKey) => {
-    setDrawer({ title, subtitle, sortKey })
-    setDrawerKey(k => k + 1)
-  }
-
+export default function KpiTab({ D, navigateDrill }) {
   const k = [
     { n: 'Coverage penerima manfaat', v: 24.3, t: 100, u: '%' },
     { n: 'SPPG operasional', v: 78.9, t: 100, u: '% target' },
@@ -34,42 +25,34 @@ export default function KpiTab({ D }) {
   ]
 
   return (
-    <>
-      <Card title="Strategic KPI · BOD Scorecard" subtitle="Aktual vs target tahunan · klik tile untuk breakdown per provinsi">
-        <div className="grid-2" style={{ gap: 12 }}>
-          {k.map(x => {
-            const pct = (x.v / x.t) * 100
-            const sortKey = METRIC_SORT[x.n] || 'comply'
-            return (
-              <div key={x.n}
-                className="drill-card-item"
-                style={{ background: '#fff', border: '1px solid var(--ink-100)', borderRadius: 8 }}
-                onClick={() => openDrawer(x.n, `Breakdown per provinsi · Aktual ${x.v}${x.u} / target ${x.t}`, sortKey)}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontWeight: 600, fontSize: 12.5 }}>{x.n}</span>
-                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--bgn-navy-deep)' }}>
-                    {x.v}<span style={{ fontSize: 11, color: 'var(--ink-500)' }}>{x.u} / target {x.t}</span>
-                  </span>
-                </div>
-                <div className="bar-track">
-                  <div className={`bar-fill ${pct >= 90 ? 'safe' : pct >= 60 ? 'gold' : 'risk'}`} style={{ width: `${Math.min(100, pct)}%` }}/>
-                </div>
-                <div style={{ marginTop: 6, fontSize: 10, color: 'var(--ink-400)', textAlign: 'right' }}>Klik untuk breakdown provinsi ↗</div>
+    <Card title="Strategic KPI · BOD Scorecard" subtitle="Aktual vs target tahunan · klik tile untuk breakdown per provinsi">
+      <div className="grid-2" style={{ gap: 12 }}>
+        {k.map(x => {
+          const pct = (x.v / x.t) * 100
+          const sortKey = METRIC_SORT[x.n] || 'comply'
+          return (
+            <div key={x.n}
+              className="drill-card-item"
+              style={{ background: '#fff', border: '1px solid var(--ink-100)', borderRadius: 8 }}
+              onClick={() => navigateDrill?.({
+                title: x.n,
+                subtitle: `Breakdown per provinsi · Aktual ${x.v}${x.u} / target ${x.t}`,
+                sortKey,
+              })}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontWeight: 600, fontSize: 12.5 }}>{x.n}</span>
+                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--bgn-navy-deep)' }}>
+                  {x.v}<span style={{ fontSize: 11, color: 'var(--ink-500)' }}>{x.u} / target {x.t}</span>
+                </span>
               </div>
-            )
-          })}
-        </div>
-      </Card>
-
-      <DrillDrawer
-        key={drawerKey}
-        open={!!drawer}
-        onClose={() => setDrawer(null)}
-        title={drawer?.title}
-        subtitle={drawer?.subtitle}
-        allProvinces={D.provinces}
-        initialSortKey={drawer?.sortKey || 'comply'}
-      />
-    </>
+              <div className="bar-track">
+                <div className={`bar-fill ${pct >= 90 ? 'safe' : pct >= 60 ? 'gold' : 'risk'}`} style={{ width: `${Math.min(100, pct)}%` }}/>
+              </div>
+              <div style={{ marginTop: 6, fontSize: 10, color: 'var(--ink-400)', textAlign: 'right' }}>Klik untuk breakdown provinsi →</div>
+            </div>
+          )
+        })}
+      </div>
+    </Card>
   )
 }

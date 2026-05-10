@@ -16,16 +16,34 @@ import LogSuhuPage from './tabs/LogSuhuPage'
 import LogChecklistPage from './tabs/LogChecklistPage'
 import DapurOpsPage from './tabs/DapurOpsPage'
 import AIRecommendationPage from './tabs/AIRecommendationPage'
+import DrillPage from './tabs/DrillPage'
 
 export default function ExecDashboard({ sidebarOpen, setSidebarOpen }) {
   const D = BGN_DATA
   const [tab, setTab] = useState('overview')
   const [selProv, setSelProv] = useState(null)
   const [modal, setModal] = useState(null)
+  const [drillConfig, setDrillConfig] = useState(null)
+  const [drillKey, setDrillKey]       = useState(0)
+  const [prevTab, setPrevTab]         = useState('overview')
 
   const navigate = (t) => { setTab(t); setSidebarOpen(false) }
 
+  const navigateDrill = (config) => {
+    setPrevTab(tab)
+    setDrillConfig(config)
+    setDrillKey(k => k + 1)
+    setTab('drill')
+    setSidebarOpen(false)
+    // scroll the .main panel (which has overflow:auto) back to top instantly
+    requestAnimationFrame(() => {
+      document.querySelector('.main')?.scrollTo({ top: 0, behavior: 'instant' })
+      window.scrollTo({ top: 0, behavior: 'instant' })
+    })
+  }
+
   const titles = {
+    drill:        drillConfig?.title || 'Drill-down Data',
     overview:     'Executive Dashboard — Program Makan Bergizi (MBG)',
     geo:          'Sebaran Geografis — 38 Provinsi',
     haccp:        'Keamanan Pangan — Standar HACCP 7 Prinsip',
@@ -76,11 +94,13 @@ export default function ExecDashboard({ sidebarOpen, setSidebarOpen }) {
             <h1>{titles[tab]}</h1>
             <div className="subtitle">Snapshot operasional nasional · 27.641 dapur SPPG aktif · 31 provinsi · Update real-time setiap 60 detik · SPPG = Satuan Pelayanan Pemenuhan Gizi (dapur gizi sekolah)</div>
           </div>
-          <div className="actions">
-            <button className="btn" onClick={() => setModal('filter')}>{Ico.filter} Filter</button>
-            <button className="btn" onClick={() => { toast('Briefing PDF dihasilkan & diunduh', 'safe') }}>{Ico.download} Briefing PDF</button>
-            <button className="btn btn-primary" onClick={() => setModal('standup')}>{Ico.bell} Daily Stand-up</button>
-          </div>
+          {tab !== 'drill' && (
+            <div className="actions">
+              <button className="btn" onClick={() => setModal('filter')}>{Ico.filter} Filter</button>
+              <button className="btn" onClick={() => { toast('Briefing PDF dihasilkan & diunduh', 'safe') }}>{Ico.download} Briefing PDF</button>
+              <button className="btn btn-primary" onClick={() => setModal('standup')}>{Ico.bell} Daily Stand-up</button>
+            </div>
+          )}
         </div>
 
         <Modal open={modal === 'filter'} onClose={() => setModal(null)} title="Filter Dashboard" w={520}>
@@ -119,58 +139,75 @@ export default function ExecDashboard({ sidebarOpen, setSidebarOpen }) {
           </div>
         </Modal>
 
-        {/* KPI strip */}
-        <div className="kpi-grid">
+        {/* KPI strip — hidden on drill page */}
+        <div className="kpi-grid" style={{ display: tab === 'drill' ? 'none' : '' }}>
           <KPI label="Porsi Makanan Disajikan Hari Ini" accent="navy"
                value={`${(D.kpis.porsiToday/1e6).toFixed(1)}`} unit="jt porsi"
                delta="+4.2% vs kemarin"
                meta={`${((D.kpis.porsiToday/D.kpis.porsiTarget)*100).toFixed(1)}% dari target nasional 82,9 juta porsi`}
-               spark={[42,48,51,55,60,58,62,68,71,69,72,71]}/>
+               spark={[42,48,51,55,60,58,62,68,71,69,72,71]}
+               onClick={() => navigateDrill({ title: 'Porsi Makanan Disajikan Hari Ini', subtitle: 'Breakdown volume porsi per provinsi — terbesar dulu', sortKey: 'porsi' })}/>
           <KPI label="Dapur Gizi Aktif (SPPG)" accent="gold"
                value={D.kpis.sppgActive.toLocaleString('id-ID')} unit=""
                delta="+126 minggu ini"
                meta={`${((D.kpis.sppgActive/D.kpis.sppgTarget)*100).toFixed(0)}% dari target 35.000 dapur nasional`}
-               spark={[24,25,26,26,27,27,27,27,28,27,27,28]}/>
+               spark={[24,25,26,26,27,27,27,27,28,27,27,28]}
+               onClick={() => navigateDrill({ title: 'Dapur Gizi Aktif (SPPG)', subtitle: 'Jumlah SPPG operasional per provinsi — terbesar dulu', sortKey: 'sppg' })}/>
           <KPI label="Dapur Lulus Standar Keamanan Pangan" accent="leaf"
                value={`${D.kpis.complianceRate}`} unit="%"
                delta="+1.8 poin vs minggu lalu"
                meta="Terverifikasi 7 prinsip HACCP secara digital"
-               spark={[78,79,80,82,83,82,84,85,85,86,87,87]}/>
+               spark={[78,79,80,82,83,82,84,85,85,86,87,87]}
+               onClick={() => navigateDrill({ title: 'Compliance Keamanan Pangan', subtitle: 'Compliance HACCP per provinsi — terburuk dulu', sortKey: 'comply' })}/>
           <KPI label="Kasus Aktif Diselidiki" accent="risk"
                value={D.kpis.incidentsOpen} unit=""
                delta="-6 vs 7 hari lalu" deltaDir="down"
                meta={`${D.kpis.incidentsClosed30d} kasus selesai dalam 30 hari terakhir`}
-               spark={D.incidents30d}/>
+               spark={D.incidents30d}
+               onClick={() => navigateDrill({ title: 'Kasus Aktif Diselidiki', subtitle: 'Provinsi dengan risk level tertinggi — prioritas investigasi', sortKey: 'risk' })}/>
         </div>
 
         {/* Secondary KPIs */}
-        <div className="kpi-grid" style={{ marginTop: 0 }}>
+        <div className="kpi-grid" style={{ marginTop: 0, display: tab === 'drill' ? 'none' : '' }}>
           <KPI label="Rata-rata Waktu Distribusi" accent="navy"
                value={D.kpis.avgDistMinutes} unit=" menit"
-               meta="Batas aman Juknis 401.1: maks 30 menit / 6 km"/>
+               meta="Batas aman Juknis 401.1: maks 30 menit / 6 km"
+               onClick={() => navigateDrill({ title: 'Rata-rata Waktu Distribusi', subtitle: 'Compliance distribusi per provinsi — terburuk dulu', sortKey: 'comply' })}/>
           <KPI label="Sampel Makanan Tersimpan" accent="leaf"
                value={D.kpis.sampleRetention} unit="%"
-               meta="2 porsi per batch disimpan 3 hari — wajib Juknis"/>
+               meta="2 porsi per batch disimpan 3 hari — wajib Juknis"
+               onClick={() => navigateDrill({ title: 'Sampel Makanan Tersimpan', subtitle: 'Kepatuhan food sample per provinsi', sortKey: 'comply' })}/>
           <KPI label="Batch Terlacak via QR" accent="gold"
                value={D.kpis.qrTraceability} unit="%"
-               meta="Target Q3 2026: 85% · supplier→batch→sekolah"/>
+               meta="Target Q3 2026: 85% · supplier→batch→sekolah"
+               onClick={() => navigateDrill({ title: 'Batch Terlacak via QR', subtitle: 'QR traceability per provinsi — terburuk dulu', sortKey: 'comply' })}/>
           <KPI label="Dapur dengan Sensor IoT" accent="warn"
                value={D.kpis.iotCoverage} unit="%"
-               meta="Cold chain, hot-holding, kendaraan"/>
+               meta="Cold chain, hot-holding, kendaraan"
+               onClick={() => navigateDrill({ title: 'Dapur dengan Sensor IoT', subtitle: 'Coverage IoT per provinsi — terburuk dulu', sortKey: 'comply' })}/>
         </div>
 
-        {tab === 'overview'  && <OverviewTab D={D}/>}
+        {tab === 'overview'  && <OverviewTab D={D} navigateDrill={navigateDrill}/>}
         {tab === 'geo'       && <GeoTab D={D} selProv={selProv} setSelProv={setSelProv}/>}
         {tab === 'haccp'     && <HaccpTab D={D}/>}
         {tab === 'ops'       && <OpsTab D={D}/>}
         {tab === 'incidents' && <IncidentsTab D={D}/>}
-        {tab === 'penerima'  && <PenerimaTab D={D}/>}
+        {tab === 'penerima'  && <PenerimaTab D={D} navigateDrill={navigateDrill}/>}
         {tab === 'juknis'    && <JuknisTab/>}
-        {tab === 'kpi'       && <KpiTab D={D}/>}
+        {tab === 'kpi'       && <KpiTab D={D} navigateDrill={navigateDrill}/>}
         {tab === 'logsuhu'      && <LogSuhuPage D={D}/>}
         {tab === 'logchecklist' && <LogChecklistPage D={D}/>}
         {tab === 'dapurops'     && <DapurOpsPage D={D}/>}
         {tab === 'airek'        && <AIRecommendationPage D={D}/>}
+        {tab === 'drill' && drillConfig && (
+          <DrillPage
+            key={drillKey}
+            config={drillConfig}
+            allProvinces={D.provinces}
+            backLabel={titles[prevTab] || prevTab}
+            onBack={() => navigate(prevTab)}
+          />
+        )}
       </main>
     </div>
   )

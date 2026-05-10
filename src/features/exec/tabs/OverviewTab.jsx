@@ -4,7 +4,6 @@ import { BarsRow } from '../../../components/ui'
 import { Ico } from '../../../components/ui/icons'
 import { IndonesiaMap } from '../../../components/map/IndonesiaMap'
 import { HaccpHeatmap } from '../../../components/ui/HaccpHeatmap'
-import { DrillDrawer } from '../../../components/ui/DrillDrawer'
 import { geoChildren } from '../../../lib/geoHelpers'
 import { riskColor, riskLabel } from '../../../lib/utils'
 import { LEVEL_LABELS } from '../constants'
@@ -184,19 +183,11 @@ function SppgTable({ rows: rowsIn, onRowClick }) {
   )
 }
 
-export default function OverviewTab({ D }) {
+export default function OverviewTab({ D, navigateDrill }) {
   const [drillLevel, setDrillLevel] = React.useState('province')
   const [drillPath,  setDrillPath]  = React.useState([])
   const [drillPoints, setDrillPoints] = React.useState(null)
   const [selPoint,   setSelPoint]   = React.useState(null)
-
-  const [drawer, setDrawer]       = React.useState(null)
-  const [drawerKey, setDrawerKey] = React.useState(0)
-
-  const openDrawer = (title, subtitle, sortKey, startAt = null) => {
-    setDrawer({ title, subtitle, sortKey, startAt })
-    setDrawerKey(k => k + 1)
-  }
 
   const findProvince = (provName) =>
     D.provinces.find(p => p.name === provName) ||
@@ -338,7 +329,12 @@ export default function OverviewTab({ D }) {
         <SppgTable rows={D.sppgList} onRowClick={(r) => {
           const provCode = r.id.split('-')[1]
           const prov = D.provinces.find(p => p.code === provCode) || findProvince(r.prov)
-          openDrawer(r.name, `${r.prov} · Drill-down ke kota/kab`, 'comply', prov ? { province: prov } : null)
+          navigateDrill?.({
+            title: r.name,
+            subtitle: `${r.prov} · Drill-down ke kota/kab`,
+            sortKey: 'comply',
+            startAt: prov ? { province: prov } : null,
+          })
         }}/>
       </Card>
 
@@ -352,7 +348,7 @@ export default function OverviewTab({ D }) {
         </Card>
         <Card title="Sertifikasi — % Dapur dengan Dokumen Valid" subtitle="SLHS = Laik Higiene · Halal = BPJPH · HACCP = 7 Prinsip · IoT = Sensor Suhu · QR = Traceabilitas · klik untuk breakdown">
           <CertBars D={D.kpis} onItemClick={(it) =>
-            openDrawer(it.n, `${it.v}% nasional · breakdown per provinsi`, 'comply')
+            navigateDrill?.({ title: it.n, subtitle: `${it.v}% nasional · breakdown per provinsi`, sortKey: 'comply' })
           }/>
         </Card>
         <Card title="Roadmap 90-hari" subtitle="Target eksekusi pilot 100 SPPG → nasional">
@@ -360,16 +356,6 @@ export default function OverviewTab({ D }) {
         </Card>
       </div>
 
-      <DrillDrawer
-        key={drawerKey}
-        open={!!drawer}
-        onClose={() => setDrawer(null)}
-        title={drawer?.title}
-        subtitle={drawer?.subtitle}
-        allProvinces={D.provinces}
-        initialSortKey={drawer?.sortKey || 'comply'}
-        startAt={drawer?.startAt}
-      />
     </div>
   )
 }
