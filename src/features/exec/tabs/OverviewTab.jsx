@@ -4,6 +4,7 @@ import { BarsRow } from '../../../components/ui'
 import { Ico } from '../../../components/ui/icons'
 import { IndonesiaMap } from '../../../components/map/IndonesiaMap'
 import { HaccpHeatmap } from '../../../components/ui/HaccpHeatmap'
+import { DrillDrawer } from '../../../components/ui/DrillDrawer'
 import { geoChildren } from '../../../lib/geoHelpers'
 import { riskColor, riskLabel } from '../../../lib/utils'
 import { LEVEL_LABELS } from '../constants'
@@ -60,7 +61,7 @@ function MaturityRadial() {
   )
 }
 
-function CertBars({ D }) {
+function CertBars({ D, onItemClick }) {
   const items = [
     { n: 'SLHS — Sertifikat Laik Higiene Sanitasi (Kemenkes)', v: D.slhsCoverage, c: 'safe' },
     { n: 'Halal — Sertifikat BPJPH', v: D.halalCoverage, c: 'gold' },
@@ -69,9 +70,9 @@ function CertBars({ D }) {
     { n: 'QR — Batch Makanan Bisa Dilacak', v: D.qrTraceability, c: 'warn' },
   ]
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {items.map((it, i) => (
-        <div key={i}>
+        <div key={i} className="drill-cert-item" onClick={() => onItemClick && onItemClick(it)}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
             <span style={{ color: 'var(--ink-700)', fontWeight: 600 }}>{it.n}</span>
             <span style={{ fontWeight: 700, color: 'var(--bgn-navy-deep)' }}>{it.v}%</span>
@@ -107,7 +108,7 @@ function Roadmap() {
   )
 }
 
-function SppgTable({ rows: rowsIn }) {
+function SppgTable({ rows: rowsIn, onRowClick }) {
   const [q, setQ] = React.useState('')
   const [sort, setSort] = React.useState('score')
   const rows = React.useMemo(() => {
@@ -153,7 +154,7 @@ function SppgTable({ rows: rowsIn }) {
           </thead>
           <tbody>
             {rows.map((r, i) => (
-              <tr key={i}>
+              <tr key={i} className={onRowClick ? 'drill-row' : ''} onClick={() => onRowClick && onRowClick(r)}>
                 <td><span className="mono">{r.id}</span></td>
                 <td><div className="strong">{r.name}</div><div style={{ fontSize: 11, color: 'var(--ink-500)' }}>{r.prov}</div></td>
                 <td style={{ textAlign: 'right' }}><span className="strong" style={{ fontVariantNumeric: 'tabular-nums' }}>{r.porsi.toLocaleString('id-ID')}</span></td>
@@ -188,6 +189,19 @@ export default function OverviewTab({ D }) {
   const [drillPath,  setDrillPath]  = React.useState([])
   const [drillPoints, setDrillPoints] = React.useState(null)
   const [selPoint,   setSelPoint]   = React.useState(null)
+
+  const [drawer, setDrawer]       = React.useState(null)
+  const [drawerKey, setDrawerKey] = React.useState(0)
+
+  const openDrawer = (title, subtitle, sortKey, startAt = null) => {
+    setDrawer({ title, subtitle, sortKey, startAt })
+    setDrawerKey(k => k + 1)
+  }
+
+  const findProvince = (provName) =>
+    D.provinces.find(p => p.name === provName) ||
+    D.provinces.find(p => p.code === provName.split('-')[1]) ||
+    D.provinces.find(p => p.name.includes(provName.split(' ')[0]) && provName.length > 4 && p.name.split(' ').length > 1)
 
   const currentPoints = drillPoints || D.provinces
   const nextLabel = drillLevel === 'province' ? 'Kota/Kab' : drillLevel === 'kota' ? 'Kecamatan' : drillLevel === 'kecamatan' ? 'Kelurahan' : null
@@ -321,7 +335,11 @@ export default function OverviewTab({ D }) {
               <button className="btn">{Ico.download} Ekspor CSV</button>
             </>}
             padded={false}>
-        <SppgTable rows={D.sppgList}/>
+        <SppgTable rows={D.sppgList} onRowClick={(r) => {
+          const provCode = r.id.split('-')[1]
+          const prov = D.provinces.find(p => p.code === provCode) || findProvince(r.prov)
+          openDrawer(r.name, `${r.prov} · Drill-down ke kota/kab`, 'comply', prov ? { province: prov } : null)
+        }}/>
       </Card>
 
       {/* Trend + cert coverage */}
@@ -332,13 +350,26 @@ export default function OverviewTab({ D }) {
             <span>10 Apr</span><span>25 Apr</span><span>9 Mei</span>
           </div>
         </Card>
-        <Card title="Sertifikasi — % Dapur dengan Dokumen Valid" subtitle="SLHS = Laik Higiene · Halal = BPJPH · HACCP = 7 Prinsip · IoT = Sensor Suhu · QR = Traceabilitas">
-          <CertBars D={D.kpis}/>
+        <Card title="Sertifikasi — % Dapur dengan Dokumen Valid" subtitle="SLHS = Laik Higiene · Halal = BPJPH · HACCP = 7 Prinsip · IoT = Sensor Suhu · QR = Traceabilitas · klik untuk breakdown">
+          <CertBars D={D.kpis} onItemClick={(it) =>
+            openDrawer(it.n, `${it.v}% nasional · breakdown per provinsi`, 'comply')
+          }/>
         </Card>
         <Card title="Roadmap 90-hari" subtitle="Target eksekusi pilot 100 SPPG → nasional">
           <Roadmap/>
         </Card>
       </div>
+
+      <DrillDrawer
+        key={drawerKey}
+        open={!!drawer}
+        onClose={() => setDrawer(null)}
+        title={drawer?.title}
+        subtitle={drawer?.subtitle}
+        allProvinces={D.provinces}
+        initialSortKey={drawer?.sortKey || 'comply'}
+        startAt={drawer?.startAt}
+      />
     </div>
   )
 }

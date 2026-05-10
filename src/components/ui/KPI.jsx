@@ -17,9 +17,9 @@ function Sparkline({ points, className, color = 'var(--bgn-navy-500)', fill = tr
   )
 }
 
-export function KPI({ label, value, unit, delta, deltaDir = 'up', meta, accent = 'navy', spark }) {
+export function KPI({ label, value, unit, delta, deltaDir = 'up', meta, accent = 'navy', spark, onClick }) {
   return (
-    <div className={`kpi ${accent}`}>
+    <div className={`kpi ${accent}${onClick ? ' kpi-clickable' : ''}`} onClick={onClick}>
       <div className="label">{label}</div>
       <div className="value">{value}{unit && <span className="unit">{unit}</span>}</div>
       {delta && (

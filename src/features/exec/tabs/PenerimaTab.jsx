@@ -1,8 +1,16 @@
 import React, { useState } from 'react'
 import { Card, KPI } from '../../../components/ui'
+import { DrillDrawer } from '../../../components/ui/DrillDrawer'
 
 export default function PenerimaTab({ D }) {
   const [provTab, setProvTab] = useState('coverage')
+  const [drawer, setDrawer]   = useState(null)
+  const [drawerKey, setDrawerKey] = useState(0)
+
+  const openDrawer = (title, subtitle, sortKey, startAt = null) => {
+    setDrawer({ title, subtitle, sortKey, startAt })
+    setDrawerKey(k => k + 1)
+  }
 
   const jenjang = [
     { n: 'SD / MI', v: 9840, target: 24000, gender: [51, 49], icon: '🏫' },
@@ -42,16 +50,20 @@ export default function PenerimaTab({ D }) {
         <KPI label="Total Penerima Manfaat Aktif" accent="navy"
           value={(totalPenerima / 1000).toFixed(1)} unit="jt anak"
           meta="Snapshot 9 Mei 2026 · naik 21% dari bulan lalu"
-          spark={[8.2, 10.4, 13.1, 16.7, 20.1]}/>
+          spark={[8.2, 10.4, 13.1, 16.7, 20.1]}
+          onClick={() => openDrawer('Total Penerima Manfaat Aktif', 'Breakdown per provinsi · urutkan dari porsi terbesar', 'porsi')}/>
         <KPI label="Satuan Pendidikan Terjangkau" accent="gold"
           value="20.118" unit=" sekolah"
-          meta="SD / SMP / SMA / PAUD di 31 provinsi"/>
+          meta="SD / SMP / SMA / PAUD di 31 provinsi"
+          onClick={() => openDrawer('Satuan Pendidikan Terjangkau', 'Breakdown per provinsi · urutkan dari SPPG terbesar', 'sppg')}/>
         <KPI label="Coverage terhadap Target Nasional" accent="leaf"
           value="24,3" unit="%"
-          meta="Target: 82,9 juta anak — gap 62,8 juta"/>
+          meta="Target: 82,9 juta anak — gap 62,8 juta"
+          onClick={() => openDrawer('Coverage terhadap Target Nasional', 'Compliance per provinsi · terburuk dulu', 'comply')}/>
         <KPI label="Rata-rata Porsi per Anak / Hari" accent="warn"
           value="3.571" unit=" porsi"
-          meta="Ekuivalen kalori: 574–638 kkal · protein 24–32 g"/>
+          meta="Ekuivalen kalori: 574–638 kkal · protein 24–32 g"
+          onClick={() => openDrawer('Rata-rata Porsi per Anak / Hari', 'Breakdown per provinsi · urutkan dari porsi terbesar', 'porsi')}/>
       </div>
       <div className="grid-2" style={{ gap: 14 }}>
         <Card title="Distribusi Penerima per Jenjang Pendidikan" subtitle="Dalam ribuan anak · vs target tahunan">
@@ -120,7 +132,7 @@ export default function PenerimaTab({ D }) {
         </div>
       </Card>
 
-      <Card title="Sebaran Penerima Manfaat per Provinsi" subtitle="12 provinsi dengan volume porsi tertinggi · diurutkan dari terbesar"
+      <Card title="Sebaran Penerima Manfaat per Provinsi" subtitle="12 provinsi dengan volume porsi tertinggi · klik baris untuk drill-down"
         padded={false}>
         <div style={{ display: 'flex', gap: 8, padding: '12px 16px 0' }}>
           {[['coverage','Coverage'],['volume','Volume Porsi'],['risk','Risk Level']].map(([v, l]) => (
@@ -143,7 +155,8 @@ export default function PenerimaTab({ D }) {
             </thead>
             <tbody>
               {topProvs.map((p, i) => (
-                <tr key={p.code}>
+                <tr key={p.code} className="drill-row"
+                  onClick={() => openDrawer(p.name, 'Breakdown kota/kab — klik untuk terus drill-down', 'sppg', { province: p })}>
                   <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--ink-400)', fontSize: 11 }}>{i + 1}</td>
                   <td><span className="strong">{p.name}</span></td>
                   <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
@@ -177,6 +190,17 @@ export default function PenerimaTab({ D }) {
       <div style={{ padding: '12px 16px', background: 'var(--bgn-sky-pale)', borderRadius: 8, fontSize: 12, color: 'var(--ink-500)', lineHeight: 1.7, border: '1px solid var(--border)' }}>
         <strong style={{ color: 'var(--ink-700)' }}>Catatan metodologi:</strong> Estimasi penerima manfaat dihitung dari volume porsi harian ÷ 250 ml ekuivalen per anak (proxy distribusi). Data satuan pendidikan berdasarkan registry BGN Pusat. Dampak gizi dari survei cepat BGN–Kemenkes pilot Maret 2026, belum representatif nasional. Coverage target mengacu Perpres No. 83/2025.
       </div>
+
+      <DrillDrawer
+        key={drawerKey}
+        open={!!drawer}
+        onClose={() => setDrawer(null)}
+        title={drawer?.title}
+        subtitle={drawer?.subtitle}
+        allProvinces={D.provinces}
+        initialSortKey={drawer?.sortKey || 'porsi'}
+        startAt={drawer?.startAt}
+      />
     </div>
   )
 }

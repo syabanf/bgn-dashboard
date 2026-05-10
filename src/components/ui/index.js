@@ -1,4 +1,5 @@
 export { Card } from './Card'
+export { DrillDrawer } from './DrillDrawer'
 export { KPI } from './KPI'
 export { Modal } from './Modal'
 export { Toaster, toast } from './Toaster'
